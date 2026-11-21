@@ -19,8 +19,9 @@ int start_editor(EDITOR *edit)
         {
             if(arg==NULL)
             {
-                printf("\nInvalid input:\n");
-                printf("insert <text> - Add text as a new line at the end\n\n");
+                insert_txt(edit,"");
+                edit->cursor_line++;
+                edit->cursor_col = 0;
                 continue;
             }
             insert_txt(edit,arg);
@@ -43,6 +44,35 @@ int start_editor(EDITOR *edit)
             if(delete_txt(edit,pos)==FAILURE)
                 printf("\nInvalid input:\ndelete's num_chars should be positive\n\n");
 
+        }
+        else if(!strcmp(cmd,"copy"))
+        {
+            char *start = strtok(arg," ");
+            char *end = strtok(NULL,"");
+            if(start == NULL || end == NULL)
+            {
+                printf("\nInvalid input:\n");
+                printf("copy  <startpos> <endpos> - Copy selected characters to clipboard\n\n");
+                continue;
+            }
+            // printf("start: %s\nend: %s\n",start,end);
+            copy_txt(edit,atoi(start),atoi(end));
+        }
+        else if(!strcmp(cmd,"cut"))
+        {
+            char *start = strtok(arg," ");
+            char *end = strtok(NULL,"");
+            if(start == NULL || end == NULL)
+            {
+                printf("\nInvalid input:\n");
+                printf("cut   <startpos> <endpos> - Cut selected characters and store in clipboard\n\n");
+                continue;
+            }
+            cut_txt(edit,atoi(start),atoi(end));
+        }
+        else if(!strcmp(cmd,"paste"))
+        {
+            paste_txt(edit);
         }
         else if(!strcmp(cmd,"exit"))
         {
@@ -74,10 +104,13 @@ void print_menu()
     printf("\nText Editor Commands:\n"); 
     printf("1. insert <text> - Add text as a new line at the end\n");
     printf("2. delete <num_chars> - Delete characters before the cursor\n"); 
-    printf("3. undo - Undo the last operation\n");
-    printf("4. redo - Redo the last undone operation\n"); 
-    printf("5. print - Print the current document\n");
-    printf("6. exit - Exit the text editor Enter command:\n\n");
+    printf("3. copy  <startpos> <endpos> - Copy selected characters to clipboard\n");
+    printf("4. cut   <startpos> <endpos> - Cut selected characters and store in clipboard\n");
+    printf("5. paste - Insert clipboard content at cursor position\n");
+    printf("6. undo - Undo the last operation\n");
+    printf("7. redo - Redo the last undone operation\n"); 
+    printf("8. print - Print the current document\n");
+    printf("9. exit - Exit the text editor Enter command:\n\n");
 }
 
 //-----------------------------------------------------------------------------------------------------------------//
@@ -144,6 +177,42 @@ int delete_txt(EDITOR *edit,int pos)
     temp->txt[edit->cursor_col-pos]='\0';
     edit->cursor_col = edit->cursor_col-pos;
     return SUCCESS;
+}
+
+//-----------------------------------------------------------------------------------------------------------------//
+
+int copy_txt(EDITOR *edit,int start,int end)
+{
+    LINE *temp = edit->tail;
+    int j=0;
+    for(int i=start;i<end;i++)
+    {
+       edit->clipboard[j++] = temp->txt[i];
+    }
+    edit->clipboard[j]='\0';
+}
+
+//-----------------------------------------------------------------------------------------------------------------//
+
+int cut_txt(EDITOR *edit,int start,int end)
+{
+    LINE *temp = edit->tail;
+    int j=0;
+    for(int i=start;i<end;i++)
+    {
+       edit->clipboard[j++] = temp->txt[i];
+    }
+    strcpy(&temp->txt[start],&temp->txt[end]);
+    edit->clipboard[j]='\0';
+}
+
+//-----------------------------------------------------------------------------------------------------------------//
+
+int paste_txt(EDITOR *edit)
+{
+    LINE *temp = edit->tail;
+    strcat(temp->txt,edit->clipboard);
+    edit->cursor_col = strlen(temp->txt);
 }
 
 //-----------------------------------------------------------------------------------------------------------------//

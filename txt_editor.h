@@ -11,19 +11,6 @@
 
 typedef long int l_int;
 
-// typedef enum
-// {
-//     e_insert,
-//     e_delete,
-//     e_undo,
-//     e_redo,
-//     e_open,
-//     e_close,
-//     e_save,
-//     e_print,
-//     e_exit
-// }
-
 typedef struct node
 {
     char txt[MAX];
@@ -39,6 +26,8 @@ typedef struct
     l_int cursor_line;
     l_int cursor_col;
 
+    char clipboard[MAX];
+
 }EDITOR;
 
 //-----------------------------------------------------------------------------------------------------------------//
@@ -50,6 +39,9 @@ void editor_init(EDITOR *);
 int insert_txt(EDITOR *,char *);
 int display_document(EDITOR *);
 int delete_txt(EDITOR *,int);
+int copy_txt(EDITOR *,int,int);
+int cut_txt(EDITOR *,int,int);
+int paste_txt(EDITOR *);
 
 //-----------------------------------------------------------------------------------------------------------------//
 
