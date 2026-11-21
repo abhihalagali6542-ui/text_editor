@@ -1,5 +1,63 @@
 #include"txt_editor.h"
 
+
+int start_editor(EDITOR *edit)
+{
+    char input[MAX];
+    char *cmd;
+    char *arg;
+
+    while(1)
+    {
+        printf("Enter Command: ");
+        fgets(input,sizeof(input),stdin);
+
+        cmd = strtok(input," \n");
+        arg = strtok(NULL,"\n");
+
+        if(!strcmp(cmd,"insert"))
+        {
+            if(arg==NULL)
+            {
+                printf("\nInvalid input:\n");
+                printf("insert <text> - Add text as a new line at the end\n\n");
+                continue;
+            }
+            insert_txt(edit,arg);
+            edit->cursor_line++;
+            edit->cursor_col = strlen(arg);
+        }
+        else if(!strcmp(cmd,"print"))
+        {
+            display_document(edit);
+        }
+        else if(!strcmp(cmd,"delete"))
+        {
+            if(arg==NULL)
+            {
+                printf("\nInvalid input:\n");
+                printf("delete <num_chars> - Delete characters before the cursor\n\n");
+                continue;
+            }
+            int pos = atoi(arg);
+            if(delete_txt(edit,pos)==FAILURE)
+                printf("\nInvalid input:\ndelete's num_chars should be positive\n\n");
+
+        }
+        else if(!strcmp(cmd,"exit"))
+        {
+            printf("exiting...\n");
+            return SUCCESS;
+        }
+        else
+        {
+            printf("\ninvalid! re-try:\n\n");
+            print_menu();
+        }
+    }
+}
+
+
 //-----------------------------------------------------------------------------------------------------------------//
 
 void print_banner()
@@ -38,7 +96,7 @@ int insert_txt(EDITOR *edit,char *txt)
 {
     LINE *newnode = malloc(sizeof(LINE));
     if(newnode == NULL)
-        return 0;
+        return FAILURE;
     strcpy(newnode->txt,txt);
     newnode->prev = NULL;
     newnode->next = NULL;
@@ -47,23 +105,23 @@ int insert_txt(EDITOR *edit,char *txt)
     {
         edit->head = newnode;
         edit->tail = newnode;
-        return 0;
+        return SUCCESS;
     }
     LINE *temp = edit->tail;
     temp->next = newnode;
     newnode->prev = temp;
     edit->tail = newnode;
-    return 0;
+    return SUCCESS;
 }
 
 //-----------------------------------------------------------------------------------------------------------------//
 
-int display(EDITOR *edit)
+int display_document(EDITOR *edit)
 {
     printf("\n|----------------------------------------------------------------------------------------------------|\n");
     LINE *temp = edit->head;
     if(temp==NULL)
-        printf("EMPTY\n");
+        printf("empty document\n");
     int i=1;
     while(temp)
     {
@@ -72,7 +130,20 @@ int display(EDITOR *edit)
         temp=temp->next;
     }
     printf("Cursor position: Line %ld, Column %ld\n",edit->cursor_line,edit->cursor_col);
-    printf("|----------------------------------------------------------------------------------------------------|\n");
+    printf("|----------------------------------------------------------------------------------------------------|\n\n");
+}
+
+//-----------------------------------------------------------------------------------------------------------------//
+
+int delete_txt(EDITOR *edit,int pos)
+{
+    LINE *temp = edit->tail;
+    if(pos<=0 || edit->cursor_col<pos)
+        return FAILURE;
+
+    temp->txt[edit->cursor_col-pos]='\0';
+    edit->cursor_col = edit->cursor_col-pos;
+    return SUCCESS;
 }
 
 //-----------------------------------------------------------------------------------------------------------------//

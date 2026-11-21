@@ -6,6 +6,9 @@
 #include<stdlib.h>
 
 #define MAX 100
+#define SUCCESS 0
+#define FAILURE -1
+
 typedef long int l_int;
 
 // typedef enum
@@ -40,11 +43,13 @@ typedef struct
 
 //-----------------------------------------------------------------------------------------------------------------//
 
+int start_editor(EDITOR *);
 void print_banner();
 void print_menu();
 void editor_init(EDITOR *);
 int insert_txt(EDITOR *,char *);
-int display(EDITOR *);
+int display_document(EDITOR *);
+int delete_txt(EDITOR *,int);
 
 //-----------------------------------------------------------------------------------------------------------------//
 
