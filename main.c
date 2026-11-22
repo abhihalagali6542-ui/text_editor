@@ -1,7 +1,5 @@
 #include "txt_editor.h"
 
-#define MAX 100
-
 int main()
 {
     EDITOR edit;

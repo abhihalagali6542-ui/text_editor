@@ -1,5 +1,8 @@
-#include"txt_editor.h"
+#include "txt_editor.h"
+#include "txt_ops.h"
+#include "file_ops.h"
 
+//-----------------------------------------------------------------------------------------------------------------//
 
 int start_editor(EDITOR *edit)
 {
@@ -13,20 +16,26 @@ int start_editor(EDITOR *edit)
         fgets(input,sizeof(input),stdin);
 
         cmd = strtok(input," \n");
+        if(cmd == NULL)
+        {
+            continue;
+        }
         arg = strtok(NULL,"\n");
 
         if(!strcmp(cmd,"insert"))
         {
             if(arg==NULL)
             {
-                insert_txt(edit,"");
-                edit->cursor_line++;
-                edit->cursor_col = 0;
+                if(insert_txt(edit,"")==SUCCESS)
+                {
+                    printf("\n[ SUCCESS ] blank inserted\n\n");
+                }
                 continue;
             }
-            insert_txt(edit,arg);
-            edit->cursor_line++;
-            edit->cursor_col = strlen(arg);
+            if(insert_txt(edit,arg)==SUCCESS)
+            {
+                printf("\n[ SUCCESS ] text inserted\n\n");
+            }
         }
         else if(!strcmp(cmd,"print"))
         {
@@ -36,13 +45,13 @@ int start_editor(EDITOR *edit)
         {
             if(arg==NULL)
             {
-                printf("\nInvalid input:\n");
+                printf("\n[ ERROR ] Invalid input:\n");
                 printf("delete <num_chars> - Delete characters before the cursor\n\n");
                 continue;
             }
             int pos = atoi(arg);
-            if(delete_txt(edit,pos)==FAILURE)
-                printf("\nInvalid input:\ndelete's num_chars should be positive\n\n");
+            if(delete_txt(edit,pos)==SUCCESS)
+                printf("\n[ SUCCESS ] text deleted\n\n");
 
         }
         else if(!strcmp(cmd,"copy"))
@@ -51,12 +60,13 @@ int start_editor(EDITOR *edit)
             char *end = strtok(NULL,"");
             if(start == NULL || end == NULL)
             {
-                printf("\nInvalid input:\n");
-                printf("copy  <startpos> <endpos> - Copy selected characters to clipboard\n\n");
+                printf("\n[ ERROR ] Invalid input:\n");
+                printf("copy <startpos> <endpos> - Copy selected characters to clipboard\n\n");
                 continue;
             }
             // printf("start: %s\nend: %s\n",start,end);
-            copy_txt(edit,atoi(start),atoi(end));
+            if(copy_txt(edit,atoi(start),atoi(end))==SUCCESS)
+                printf("\n[ SUCCESS ] text copied\n\n");
         }
         else if(!strcmp(cmd,"cut"))
         {
@@ -64,25 +74,57 @@ int start_editor(EDITOR *edit)
             char *end = strtok(NULL,"");
             if(start == NULL || end == NULL)
             {
-                printf("\nInvalid input:\n");
-                printf("cut   <startpos> <endpos> - Cut selected characters and store in clipboard\n\n");
+                printf("\n[ ERROR ] Invalid input:\n");
+                printf("cut <startpos> <endpos> - Cut selected characters and store in clipboard\n\n");
                 continue;
             }
-            cut_txt(edit,atoi(start),atoi(end));
+            if(cut_txt(edit,atoi(start),atoi(end))==SUCCESS)
+                printf("\n[ SUCCESS ] text cut\n\n");
         }
         else if(!strcmp(cmd,"paste"))
         {
-            paste_txt(edit);
+            if(paste_txt(edit)==SUCCESS)
+                printf("\n[ SUCCESS ] text pasted\n\n");
+        }
+        else if(!strcmp(cmd,"save"))
+        {
+            if(arg==NULL)
+            {
+                printf("\n[ ERROR ] Invalid input:\n");
+                printf("save <file_name> - Save the current document to a file\n\n");
+                continue;
+            }
+            if(save_file(edit,arg)==SUCCESS)
+                printf("\n[ SUCCESS ] file saved\n\n");
+        }
+        else if(!strcmp(cmd,"open"))
+        {
+            if(arg==NULL)
+            {
+                printf("\n[ ERROR ] Invalid input:\n");
+                printf("open  <file_name> - Open an existing .txt file\n\n");
+                continue;
+            }
+            if(open_file(edit,arg)==SUCCESS)
+                printf("\n[ SUCCESS ] file opned\n\n");
+        }
+        else if(!strcmp(cmd,"close"))
+        {
+            close_file(edit);
         }
         else if(!strcmp(cmd,"exit"))
         {
             printf("exiting...\n");
             return SUCCESS;
         }
+        else if(!strcmp(cmd,"help"))
+        {
+            printf("[ HELP MENU ] \n");
+            print_menu();
+        }
         else
         {
-            printf("\ninvalid! re-try:\n\n");
-            print_menu();
+            printf("\n[ ERROR ] invalid! re-try:\n\n");
         }
     }
 }
@@ -109,8 +151,11 @@ void print_menu()
     printf("5. paste - Insert clipboard content at cursor position\n");
     printf("6. undo - Undo the last operation\n");
     printf("7. redo - Redo the last undone operation\n"); 
-    printf("8. print - Print the current document\n");
-    printf("9. exit - Exit the text editor Enter command:\n\n");
+    printf("8. save <file_name> - Save the current document to a file\n");
+    printf("9. open  <file_name> - Open an existing .txt file\n");
+    printf("10. close - Close the current document\n");
+    printf("11. print - Print the current document\n");
+    printf("12. exit - Exit the text editor Enter command:\n\n");
 }
 
 //-----------------------------------------------------------------------------------------------------------------//
@@ -121,30 +166,9 @@ void editor_init(EDITOR *edit)
     edit->tail=NULL;
     edit->cursor_line=0;
     edit->cursor_col=0;
-}
-
-//-----------------------------------------------------------------------------------------------------------------//
-
-int insert_txt(EDITOR *edit,char *txt)
-{
-    LINE *newnode = malloc(sizeof(LINE));
-    if(newnode == NULL)
-        return FAILURE;
-    strcpy(newnode->txt,txt);
-    newnode->prev = NULL;
-    newnode->next = NULL;
-
-    if(edit->head == NULL && edit->tail == NULL)
-    {
-        edit->head = newnode;
-        edit->tail = newnode;
-        return SUCCESS;
-    }
-    LINE *temp = edit->tail;
-    temp->next = newnode;
-    newnode->prev = temp;
-    edit->tail = newnode;
-    return SUCCESS;
+    edit->clipboard[0]='\0';
+    edit->fname[0]='\0';
+    edit->fptr=NULL;
 }
 
 //-----------------------------------------------------------------------------------------------------------------//
@@ -154,7 +178,7 @@ int display_document(EDITOR *edit)
     printf("\n|----------------------------------------------------------------------------------------------------|\n");
     LINE *temp = edit->head;
     if(temp==NULL)
-        printf("empty document\n");
+        printf("[ INFO ] Empty document\n");
     int i=1;
     while(temp)
     {
@@ -164,55 +188,6 @@ int display_document(EDITOR *edit)
     }
     printf("Cursor position: Line %ld, Column %ld\n",edit->cursor_line,edit->cursor_col);
     printf("|----------------------------------------------------------------------------------------------------|\n\n");
-}
-
-//-----------------------------------------------------------------------------------------------------------------//
-
-int delete_txt(EDITOR *edit,int pos)
-{
-    LINE *temp = edit->tail;
-    if(pos<=0 || edit->cursor_col<pos)
-        return FAILURE;
-
-    temp->txt[edit->cursor_col-pos]='\0';
-    edit->cursor_col = edit->cursor_col-pos;
-    return SUCCESS;
-}
-
-//-----------------------------------------------------------------------------------------------------------------//
-
-int copy_txt(EDITOR *edit,int start,int end)
-{
-    LINE *temp = edit->tail;
-    int j=0;
-    for(int i=start;i<end;i++)
-    {
-       edit->clipboard[j++] = temp->txt[i];
-    }
-    edit->clipboard[j]='\0';
-}
-
-//-----------------------------------------------------------------------------------------------------------------//
-
-int cut_txt(EDITOR *edit,int start,int end)
-{
-    LINE *temp = edit->tail;
-    int j=0;
-    for(int i=start;i<end;i++)
-    {
-       edit->clipboard[j++] = temp->txt[i];
-    }
-    strcpy(&temp->txt[start],&temp->txt[end]);
-    edit->clipboard[j]='\0';
-}
-
-//-----------------------------------------------------------------------------------------------------------------//
-
-int paste_txt(EDITOR *edit)
-{
-    LINE *temp = edit->tail;
-    strcat(temp->txt,edit->clipboard);
-    edit->cursor_col = strlen(temp->txt);
 }
 
 //-----------------------------------------------------------------------------------------------------------------//

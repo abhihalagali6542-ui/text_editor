@@ -5,7 +5,7 @@
 #include<string.h>
 #include<stdlib.h>
 
-#define MAX 100
+#define MAX 1000
 #define SUCCESS 0
 #define FAILURE -1
 
@@ -28,6 +28,9 @@ typedef struct
 
     char clipboard[MAX];
 
+    char fname[MAX];
+    FILE *fptr;
+
 }EDITOR;
 
 //-----------------------------------------------------------------------------------------------------------------//
@@ -36,12 +39,8 @@ int start_editor(EDITOR *);
 void print_banner();
 void print_menu();
 void editor_init(EDITOR *);
-int insert_txt(EDITOR *,char *);
 int display_document(EDITOR *);
-int delete_txt(EDITOR *,int);
-int copy_txt(EDITOR *,int,int);
-int cut_txt(EDITOR *,int,int);
-int paste_txt(EDITOR *);
+
 
 //-----------------------------------------------------------------------------------------------------------------//
 
